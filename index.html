@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopping List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: linear-gradient(135deg, #a9c4e6 0%, #b9b8e6 48%, #9fd3cf 100%);
+    --bg: #eef2f7;
+    --surface: #ffffff;
+    --field: #f3f6fa;
+    --ink: #1f2a37;
+    --muted: #556375;
+    --faint: #7a889a;
+    --line: #e1e7ee;
+    --line-strong: #c5cfdb;
+    --accent: #22566b;
+    --accent-hover: #1a4557;
+    --accent-soft: #d7e6ee;
+    --danger: #a8402f;
+    --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--page);
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.45;
+    display: flex;
+    justify-content: center;
+    padding: 48px 16px 96px;
+  }
+  main { width: 100%; max-width: 560px; }
+  input, button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- header ---------- */
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin: 0; }
+  .sub { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
+  .summary { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ---------- surface ---------- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(31, 42, 55, 0.06), 0 8px 24px rgba(31, 42, 55, 0.08);
+  }
+
+  /* ---------- buttons ---------- */
+  button {
+    cursor: pointer;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: var(--surface);
+    padding: 9px 14px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: background 0.08s, border-color 0.08s, color 0.08s, transform 0.08s;
+  }
+  button:hover:not(:disabled) { background: var(--bg); }
+  button:active:not(:disabled) { transform: scale(0.96); }
+  button:disabled { color: var(--faint); cursor: not-allowed; background: var(--surface); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button.link { border: 0; background: transparent; padding: 6px 4px; color: var(--accent); font-weight: 600; }
+  button.link:hover:not(:disabled) { background: transparent; text-decoration: underline; }
+  button.link:disabled { color: var(--faint); background: transparent; }
+
+  /* ---------- add form ---------- */
+  .add { padding: 16px; }
+  form { display: flex; flex-wrap: wrap; gap: 10px; }
+  #item-name {
+    flex: 1 1 220px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    background: var(--field);
+  }
+  #item-name::placeholder { color: var(--faint); }
+  #item-name:focus, .stepper:focus-within { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+  .stepper { display: flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--field); }
+  .stepper button { border: 0; border-radius: 0; background: transparent; width: 36px; padding: 9px 0; font-size: 1.1rem; line-height: 1; color: var(--muted); }
+  .stepper button:first-child { border-radius: 7px 0 0 7px; }
+  .stepper button:last-child { border-radius: 0 7px 7px 0; }
+  #item-qty { width: 44px; border: 0; outline: 0; text-align: center; font-weight: 600; background: transparent; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+  #item-qty::-webkit-outer-spin-button, #item-qty::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .error { color: var(--danger); font-size: 0.9rem; min-height: 0; margin: 0; }
+  .error:not(:empty) { margin-top: 10px; }
+
+  /* ---------- progress ---------- */
+  .progress { margin: 20px 0 12px; }
+  .progress[hidden] { display: none; }
+  .track { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .fill { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width 0.18s ease-out; }
+
+  /* ---------- list ---------- */
+  ul { list-style: none; margin: 0; padding: 0; }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  li:last-child { border-bottom: 0; }
+  li[data-id]:hover { background: #f4f7fb; }
+  ul.panel { overflow: hidden; }
+  .name {
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-decoration: line-through;
+    text-decoration-color: transparent;
+    transition: color 0.1s, text-decoration-color 0.1s;
+  }
+  li.done .name { color: var(--faint); text-decoration-color: var(--faint); }
+  li.done .qty { opacity: 0.55; }
+
+  /* custom checkbox */
+  .tick { position: relative; width: 20px; height: 20px; flex: none; display: block; cursor: pointer; }
+  .tick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .tick .box {
+    position: absolute; inset: 0;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 5px;
+    background: var(--field);
+    display: grid; place-items: center;
+    transition: background 0.08s, border-color 0.08s;
+    pointer-events: none;
+  }
+  .tick svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .tick path { stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset 0.12s ease; }
+  .tick:hover .box { border-color: var(--accent); }
+  .tick input:checked + .box { background: var(--accent); border-color: var(--accent); }
+  .tick input:checked + .box path { stroke-dashoffset: 0; }
+  .tick input:focus-visible + .box { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* quantity */
+  .qty { display: flex; align-items: center; flex: none; border: 1px solid var(--line); border-radius: 8px; transition: opacity 0.1s; }
+  .qty button { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 1rem; line-height: 1; }
+  .qty output { min-width: 1.8em; text-align: center; font-weight: 600; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  .del { width: 28px; height: 28px; padding: 0; flex: none; border: 0; background: transparent; color: var(--faint); border-radius: 7px; display: grid; place-items: center; }
+  .del:hover:not(:disabled) { background: transparent; color: var(--danger); }
+  .del svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+  .empty { display: block; text-align: center; padding: 40px 16px; color: var(--muted); }
+  .empty strong { display: block; color: var(--ink); font-weight: 600; margin-bottom: 2px; }
+
+  /* ---------- footer ---------- */
+  .actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+
+  /* ---------- toast ---------- */
+  .toast {
+    position: fixed; left: 50%; bottom: 24px;
+    transform: translate(-50%, 160%);
+    background: var(--ink); color: #fff;
+    border-radius: 10px;
+    padding: 10px 10px 10px 16px;
+    display: flex; align-items: center; gap: 14px;
+    font-size: 0.95rem;
+    max-width: calc(100% - 32px);
+    box-shadow: 0 8px 24px rgba(38, 43, 48, 0.18);
+    transition: transform 0.16s ease-out;
+    z-index: 10;
+  }
+  .toast.show { transform: translate(-50%, 0); }
+  .toast button { padding: 5px 12px; border: 1px solid rgba(255,255,255,0.35); background: transparent; color: #fff; }
+  .toast button:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+  .toast button[hidden] { display: none; }
+  .shake { animation: shake 0.2s; }
+  @keyframes shake { 25%,75% { transform: translateX(-4px); } 50% { transform: translateX(4px); } }
+
+  @media (max-width: 480px) {
+    body { padding-top: 32px; }
+    li { padding: 12px; gap: 10px; }
+    li[data-id]:hover { background: var(--surface); }
+    .add { padding: 12px; }
+    form .primary { flex: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Shopping list</h1>
+      <p class="sub">A list that remembers.</p>
+    </div>
+    <span class="summary" id="count"></span>
+  </header>
+
+  <div class="panel add">
+    <form id="add-form" autocomplete="off">
+      <input type="text" id="item-name" placeholder="Add an item" aria-label="Item name" maxlength="80">
+      <div class="stepper">
+        <button type="button" id="qty-minus" aria-label="Decrease quantity">&minus;</button>
+        <input type="number" id="item-qty" value="1" min="1" max="999" step="1" inputmode="numeric" aria-label="Quantity">
+        <button type="button" id="qty-plus" aria-label="Increase quantity">+</button>
+      </div>
+      <button type="submit" class="primary">Add</button>
+    </form>
+    <p class="error" id="error" role="alert"></p>
+  </div>
+
+  <section class="progress" id="progress" hidden aria-hidden="true">
+    <div class="track"><div class="fill" id="fill"></div></div>
+  </section>
+
+  <ul class="panel" id="list" style="margin-top:16px"></ul>
+
+  <div class="actions">
+    <button type="button" class="link" id="clear-ticked">Clear ticked</button>
+    <button type="button" id="copy">Copy for WhatsApp</button>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <span id="toast-msg"></span>
+  <button type="button" id="toast-undo" hidden>Undo</button>
+</div>
+
+<script>
+(function () {
+  var STORAGE_KEY = "shopping-list-v1";
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var DEL_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  var TICK_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
+
+  var items = load();
+  var pendingEnter = null;
+  var pulseId = null;
+  var toastTimer = null;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $("add-form"), nameInput = $("item-name"), qtyInput = $("item-qty");
+  var errorEl = $("error"), listEl = $("list");
+  var progressEl = $("progress"), countEl = $("count"), fillEl = $("fill");
+  var clearBtn = $("clear-ticked"), copyBtn = $("copy");
+  var toastEl = $("toast"), toastMsg = $("toast-msg"), toastUndo = $("toast-undo");
+
+  // ---------- storage ----------
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return [];
+      var data = JSON.parse(raw);
+      if (!Array.isArray(data)) return [];
+      return data.filter(function (i) {
+        return i && typeof i.name === "string" && i.name.trim() &&
+               Number.isInteger(i.qty) && i.qty > 0 && typeof i.id === "string";
+      }).map(function (i) { return { id: i.id, name: i.name, qty: i.qty, done: i.done === true }; });
+    } catch (e) { return []; }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch (e) {}
+  }
+  function clone(a) { return a.map(function (i) { return { id: i.id, name: i.name, qty: i.qty, done: i.done }; }); }
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+  // ---------- actions ----------
+  function addItem(name, qty) {
+    var existing = items.find(function (i) { return !i.done && i.name.toLowerCase() === name.toLowerCase(); });
+    if (existing) {
+      existing.qty = Math.min(999, existing.qty + qty);
+      pulseId = existing.id;
+    } else {
+      var it = { id: newId(), name: name, qty: qty, done: false };
+      items.push(it);
+      pendingEnter = it.id;
+    }
+    save();
+    render();
+  }
+  function toggle(id) {
+    var it = items.find(function (i) { return i.id === id; });
+    if (!it) return;
+    it.done = !it.done;
+    save();
+    render();
+  }
+  function changeQty(id, delta) {
+    var it = items.find(function (i) { return i.id === id; });
+    if (!it) return;
+    it.qty = Math.max(1, Math.min(999, it.qty + delta));
+    save();
+    render();
+  }
+  function removeIds(ids, message) {
+    var snapshot = clone(items);
+    animateOut(ids, function () {
+      items = items.filter(function (i) { return ids.indexOf(i.id) === -1; });
+      save();
+      render();
+      showToast(message, function () { items = snapshot; save(); render(); });
+    });
+  }
+  function remove(id) {
+    var it = items.find(function (i) { return i.id === id; });
+    if (it) removeIds([id], "Removed \u201C" + it.name + "\u201D");
+  }
+  function clearTicked() {
+    var ids = items.filter(function (i) { return i.done; }).map(function (i) { return i.id; });
+    if (ids.length) removeIds(ids, "Cleared " + ids.length + (ids.length === 1 ? " item" : " items"));
+  }
+  function animateOut(ids, cb) {
+    if (reduceMotion) return cb();
+    var any = false;
+    ids.forEach(function (id) {
+      var li = listEl.querySelector('li[data-id="' + id + '"]');
+      if (li) {
+        any = true;
+        li.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 100, easing: "ease-out", fill: "forwards" });
+      }
+    });
+    if (any) setTimeout(cb, 100); else cb();
+  }
+
+  // ---------- toast ----------
+  function showToast(msg, undoFn) {
+    toastMsg.textContent = msg;
+    toastUndo.hidden = !undoFn;
+    toastUndo.onclick = undoFn ? function () { undoFn(); hideToast(); } : null;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, undoFn ? 5000 : 2500);
+  }
+  function hideToast() { toastEl.classList.remove("show"); }
+
+  // ---------- render ----------
+  function sorted() {
+    return items.filter(function (i) { return !i.done; }).concat(items.filter(function (i) { return i.done; }));
+  }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function btn(cls, label, text, fn) {
+    var b = el("button", cls, text);
+    b.type = "button";
+    b.setAttribute("aria-label", label);
+    b.addEventListener("click", fn);
+    return b;
+  }
+
+  function render() {
+    // remember where each row was so it can slide to its new position
+    var before = {};
+    listEl.querySelectorAll("li[data-id]").forEach(function (li) {
+      before[li.dataset.id] = li.getBoundingClientRect().top;
+    });
+
+    listEl.textContent = "";
+    var list = sorted();
+
+    if (!list.length) {
+      var li0 = el("li", "empty");
+      li0.appendChild(el("strong", "", "Your list is empty"));
+      li0.appendChild(document.createTextNode("Add your first item above."));
+      listEl.appendChild(li0);
+    }
+
+    list.forEach(function (it) {
+      var li = el("li", it.done ? "done" : "");
+      li.dataset.id = it.id;
+
+      var tick = el("label", "tick");
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = it.done;
+      cb.setAttribute("aria-label", "Tick off " + it.name);
+      cb.addEventListener("change", function () { toggle(it.id); });
+      var box = el("span", "box");
+      box.innerHTML = TICK_ICON;
+      tick.appendChild(cb);
+      tick.appendChild(box);
+
+      var qty = el("div", "qty");
+      var minus = btn("", "Decrease quantity of " + it.name, "\u2212", function () { changeQty(it.id, -1); });
+      minus.disabled = it.qty <= 1;
+      var plus = btn("", "Increase quantity of " + it.name, "+", function () { changeQty(it.id, 1); });
+      qty.appendChild(minus);
+      qty.appendChild(el("output", "", String(it.qty)));
+      qty.appendChild(plus);
+
+      var del = btn("del", "Remove " + it.name, "", function () { remove(it.id); });
+      del.innerHTML = DEL_ICON;
+
+      li.appendChild(tick);
+      var nameEl = el("span", "name", it.name);
+      nameEl.addEventListener("click", function () { toggle(it.id); });
+      li.appendChild(nameEl);
+      li.appendChild(qty);
+      li.appendChild(del);
+      listEl.appendChild(li);
+    });
+
+    if (!reduceMotion) {
+      listEl.querySelectorAll("li[data-id]").forEach(function (li) {
+        var id = li.dataset.id;
+        if (id === pendingEnter) {
+          li.animate([{ opacity: 0, transform: "translateY(-6px)" }, { opacity: 1, transform: "none" }],
+            { duration: 140, easing: "ease-out" });
+        } else if (id === pulseId) {
+          li.animate([{ backgroundColor: "#d7e6ee" }, { backgroundColor: "#ffffff" }],
+            { duration: 350, easing: "ease-out" });
+        } else if (before[id] !== undefined) {
+          var dy = before[id] - li.getBoundingClientRect().top;
+          if (Math.abs(dy) > 1) {
+            li.animate([{ transform: "translateY(" + dy + "px)" }, { transform: "none" }],
+              { duration: 170, easing: "cubic-bezier(.2,.8,.2,1)" });
+          }
+        }
+      });
+    }
+    pendingEnter = null;
+    pulseId = null;
+
+    var total = items.length;
+    var ticked = items.filter(function (i) { return i.done; }).length;
+    var left = total - ticked;
+    progressEl.hidden = total === 0;
+    countEl.textContent = total ? ticked + " of " + total + " ticked" : "";
+    fillEl.style.width = (total ? (ticked / total) * 100 : 0) + "%";
+    clearBtn.disabled = ticked === 0;
+    copyBtn.disabled = ticked === 0;
+  }
+
+  // ---------- form ----------
+  $("qty-minus").addEventListener("click", function () { qtyInput.value = Math.max(1, (Math.floor(Number(qtyInput.value)) || 1) - 1); });
+  $("qty-plus").addEventListener("click", function () { qtyInput.value = Math.min(999, (Math.floor(Number(qtyInput.value)) || 0) + 1); });
+
+  function fail(msg, input) {
+    errorEl.textContent = msg;
+    var box = input.closest(".stepper") || input;
+    box.classList.remove("shake");
+    void box.offsetWidth;
+    box.classList.add("shake");
+    input.focus();
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = nameInput.value.trim().replace(/\s+/g, " ");
+    var qty = Number(qtyInput.value);
+    if (!name) return fail("Enter an item name.", nameInput);
+    if (!Number.isInteger(qty) || qty < 1 || qty > 999) return fail("Quantity must be a whole number from 1 to 999.", qtyInput);
+    errorEl.textContent = "";
+    addItem(name, qty);
+    nameInput.value = "";
+    qtyInput.value = "1";
+    nameInput.focus();
+  });
+  nameInput.addEventListener("input", function () { errorEl.textContent = ""; });
+  clearBtn.addEventListener("click", clearTicked);
+
+  // ---------- WhatsApp copy ----------
+  function whatsappText() {
+    var lines = ["*Shopping list*", ""];
+    items.filter(function (i) { return i.done; }).forEach(function (i) {
+      lines.push("\u2022 " + i.qty + " \u00d7 " + i.name);
+    });
+    return lines.join("\n");
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+  function copyDone(ok) { showToast(ok ? "List copied. Paste it into WhatsApp." : "Could not copy the list."); }
+  copyBtn.addEventListener("click", function () {
+    var text = whatsappText();
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(function () { copyDone(true); }, function () { copyDone(fallbackCopy(text)); });
+    } else {
+      copyDone(fallbackCopy(text));
+    }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
